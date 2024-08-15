@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recorder and Player</title>
+    <link rel="stylesheet" href="stayle.css">
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+</head>
+<body>
+    <div class="container">
+        <p id="sentenceText">Loading sentence...</p>
+    </div>
+
+    <img src="image/voice.png" alt="voice-icon" class="record-button" id="recordBtn">
+    <p id="recordText">Tap to Record</p>
+
+    <div class="file" id="playbackControls" style="display: none;">
+        <img src="image/play.png" alt="play-icon" id="playBtn">
+        <div id="waveform" style="width:250px;"></div>
+        <div class="play">
+            <img src="image/check.png" alt="submit-icon" id="submitBtn">
+            <img src="image/delete.png" alt="delete-icon" id="deleteBtn">
+        </div>
+    </div>
+    <button id="nextBtn" style="display: none;">Next</button>
+
+    <script>
+        const recordBtn = document.getElementById('recordBtn');
+        const recordText = document.getElementById('recordText');
+        const playbackControls = document.getElementById('playbackControls');
+        const waveform = document.getElementById('waveform');
+        const playBtn = document.getElementById('playBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const sentenceText = document.getElementById('sentenceText');
+
+        const wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: '#4F4A85',
+            progressColor: '#ff006c',
+            barWidth: 4,
+            responsive: true,
+            height: 90,
+            barRadius: 4
+        });
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let maxSentenceIndex = 1000; // Set to a large value if dataset size is not known
+        let currentIndex = 0; // Store the current index
+
+        function fetchSentence(index = null) {
+            console.log(`Fetching sentence with index: ${index}`);
+            
+            // Fetch a random sentence
+            fetch(`http://127.0.0.1:5000/random-sentence`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    sentenceText.textContent = data.sentence || 'No sentence found';
+                    currentIndex = data.index;  // Update current index after fetching sentence
+                })
+                .catch(error => {
+                    console.error('Error fetching sentence:', error);
+                    sentenceText.textContent = 'Error fetching sentence';
+                });
+        }
+
+        function uploadRecording(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('index', currentIndex);  // Use the correct currentIndex
+
+            console.log('Uploading file with index:', currentIndex);
+            console.log('File size:', file.size);
+
+            fetch('http://127.0.0.1:5000/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    console.log('Upload success:', data.message);
+                    alert('Upload successful: ' + data.message);
+                } else {
+                    console.error('Upload failed:', data.error);
+                    alert('Upload failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading file:', error);
+                alert('Error uploading file');
+            });
+        }
+
+
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            console.log('MediaRecorder is supported');
+
+            recordBtn.addEventListener('click', () => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    recordText.textContent = ''; // Remove the "Tap to Record" text
+                } else {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => {
+                            mediaRecorder = new MediaRecorder(stream);
+                            mediaRecorder.ondataavailable = event => {
+                                audioChunks.push(event.data);
+                            };
+                            mediaRecorder.onstop = () => {
+                                const audioBlob = new Blob(audioChunks, { type: 'audio/m4a' });
+                                audioChunks = [];
+                                const audioUrl = URL.createObjectURL(audioBlob);
+
+                                wavesurfer.load(audioUrl);
+
+                                // Hide the record button and show playback controls
+                                recordBtn.style.display = 'none';
+                                playbackControls.style.display = 'flex';
+                                nextBtn.style.display = 'block'; // Show next button after recording
+
+                                // Save audio Blob to a variable for later upload
+                                window.recordedAudioBlob = audioBlob;
+                            };
+                            mediaRecorder.start();
+                            recordText.textContent = 'Recording... Click again to stop';
+                        })
+                        .catch(error => {
+                            console.error('Error accessing audio media', error);
+                            recordText.textContent = 'Error accessing audio media';
+                        });
+                }
+            });
+        } else {
+            console.log('MediaRecorder is not supported');
+            recordText.textContent = 'MediaRecorder is not supported in your browser';
+        }
+
+        // Playback functionality
+        playBtn.onclick = function() {
+            wavesurfer.playPause();
+            playBtn.src = wavesurfer.isPlaying() ? "image/pause.png" : "image/play.png";
+        };
+
+        wavesurfer.on('finish', function() {
+            playBtn.src = "image/play.png";
+            wavesurfer.stop();
+        });
+
+        // Submit recording
+        submitBtn.onclick = function() {
+            if (window.recordedAudioBlob) {
+                uploadRecording(window.recordedAudioBlob); // Use currentIndex for upload
+                fetchSentence(currentIndex); // Fetch sentence with the current index
+
+                // Reset the interface for the next recording
+                playbackControls.style.display = 'none';
+                recordBtn.style.display = 'block';
+                nextBtn.style.display = 'none';
+                recordText.textContent = 'Tap to Record';
+
+                // Clear the recorded audio blob after submission
+                window.recordedAudioBlob = null;
+            }
+        };
+
+        // Delete recording
+        deleteBtn.onclick = function() {
+            // Clear the recorded audio
+            window.recordedAudioBlob = null;
+            // Reset the interface for the next recording
+            playbackControls.style.display = 'none';
+            recordBtn.style.display = 'block';
+            nextBtn.style.display = 'none';
+            recordText.textContent = 'Tap to Record';
+        };
+
+        // Fetch new sentence randomly
+        nextBtn.onclick = function() {
+            //const randomIndex = Math.floor(Math.random() * maxSentenceIndex);
+            fetchSentence();
+            // Reset the interface for the next recording
+            playbackControls.style.display = 'none';
+            recordBtn.style.display = 'block';
+            nextBtn.style.display = 'none';
+            recordText.textContent = 'Tap to Record';
+        };
+
+        // Fetch initial sentence and maximum index
+        fetchSentence(0);
+    </script>
+</body>
+</html>

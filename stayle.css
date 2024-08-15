@@ -1,0 +1,94 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #F5E8DD;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    overflow-x: hidden; 
+    
+}
+
+.container {
+    width: 60%;
+    text-align: center;
+    background-color: #EED3D9;
+    overflow-x: hidden;
+    
+    margin-left: 20%;
+    margin-top: 50px;
+    margin-bottom: 350px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file img{
+    width: 70px;
+}
+.play img{
+    width:45px;
+    padding: 7px;
+}
+.file{
+    margin-top: -250px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+}
+
+button{
+    background-color: #FF4C4C;
+    width:100px;
+    height: 40px;
+    display:block;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 220px auto;
+    
+    
+}
+
+.record-button {
+    cursor: pointer;
+    width: 100px;
+    height: 100px;
+    margin: 80px auto;
+    
+}
+
+#recordText {
+    font-size: 16px;
+    margin-top: 10px;
+   
+}
+
+#waveform {
+    width: 100%;
+    height: 128px; /* Adjust height as needed */
+    margin-top: 20px;
+}
+
+
+/* Media Query for phones */
+@media (max-width: 600px) {
+    .container{
+        margin-left: 0px;
+        width:95%;
+        padding: 20px;
+        
+        
+    }
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+    .container{
+        margin-left: 30px;
+        width:87%;
+        padding: 20px;
+        
+        
+    }
+}
